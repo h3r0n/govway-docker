@@ -55,7 +55,7 @@ while getopts "ht:v:d:jl:i:a:r:m:w:o:e:f:" opt; do
     t) TAG="$OPTARG"; NO_COLON=${TAG//:/}
       [ ${#TAG} -eq ${#NO_COLON} -o "${TAG:0:1}" == ':' -o "${TAG:(-1):1}" == ':' ] && { echo "Il tag fornito \"$TAG\" non utilizza la sintassi <repository>:<tagname>"; exit 2; } ;;
     v) VER="$OPTARG"; [ -n "$BRANCH" ] && { echo "Le opzioni -v e -b sono incompatibili. Impostare solo una delle due."; exit 2; } ;;
-    d) DB="${OPTARG}"; case "$DB" in hsql);;postgresql);;oracle);;*) echo "Database non supportato: $DB"; exit 2;; esac ;;
+    d) DB="${OPTARG}"; case "$DB" in hsql);;postgresql);;mysql);;oracle);;*) echo "Database non supportato: $DB"; exit 2;; esac ;;
     l) LOCALFILE="$OPTARG"
         [ ! -f "${LOCALFILE}" ] && { echo "Il file indicato non esiste o non e' raggiungibile [${LOCALFILE}]."; exit 3; } 
        ;;
@@ -148,6 +148,7 @@ then
   case "${DB:-hsql}" in
   hsql) TAG="${REPO}:${TAGNAME}" ;;
   postgresql) TAG="${REPO}:${TAGNAME}_postgres" ;;
+  mysql) TAG="${REPO}:${TAGNAME}_mysql" ;;
   oracle) TAG="${REPO}:${TAGNAME}_oracle" ;;
   esac
 fi
@@ -242,6 +243,39 @@ EOYAML
         - POSTGRES_DB=govwaydb
         - POSTGRES_USER=govway
         - POSTGRES_PASSWORD=govway
+EOYAML
+  elif [ "${DB:-hsql}" == 'mysql' ]
+  then
+    cat - << EOYAML >> compose/docker-compose.yaml
+    environment:
+        - GOVWAY_DEFAULT_ENTITY_NAME=Ente
+        - GOVWAY_DB_SERVER=my_govway_${SHORT}
+        - GOVWAY_DB_NAME=govwaydb
+        - GOVWAY_DB_USER=govway
+        - GOVWAY_DB_PASSWORD=govway
+        - GOVWAY_POP_DB_SKIP=false
+# Decommentare dopo il build dell'immagine batch (usando l'opzione "-a batch")
+#  batch_stat_orarie:
+#    container_name: govway_batch_${SHORT}
+#    image: linkitaly/govway:${VER:-${LATEST_GOVWAY_RELEASE}}_batch_mysql
+#    #command: Giornaliere
+#    #command: Orarie # << default
+#    depends_on:
+#        - database
+#    environment:
+#        - GOVWAY_STAT_DB_SERVER=my_govway_${SHORT}
+#        - GOVWAY_STAT_DB_NAME=govwaydb
+#        - GOVWAY_STAT_DB_USER=govway
+#        - GOVWAY_STAT_DB_PASSWORD=govway
+#        - GOVWAY_BATCH_USA_CRON=yes
+  database:
+    container_name: my_govway_${SHORT}
+    image: mysql:8.4.0
+    environment:
+        - MYSQL_DATABASE=govwaydb
+        - MYSQL_USER=govway
+        - MYSQL_PASSWORD=govway
+        - MYSQL_ROOT_PASSWORD=govway
 EOYAML
   elif [ "${DB:-hsql}" == 'oracle' ]
   then

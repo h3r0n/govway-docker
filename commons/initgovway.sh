@@ -76,6 +76,11 @@ do
         JDBC_URL="jdbc:postgresql://${SERVER_HOST}:${SERVER_PORT}/${DBNAME}${QUERYSTRING}"
         START_TRANSACTION="START TRANSACTION;"
     ;;
+    mysql)
+        [ "${SERVER_PORT}" == "${SERVER_HOST}" ] && SERVER_PORT=3306
+        JDBC_URL="jdbc:mysql://${SERVER_HOST}:${SERVER_PORT}/${DBNAME}${QUERYSTRING}"
+        START_TRANSACTION="START TRANSACTION;"
+    ;;
     hsql|*)
         DBNAME=govway
         DBUSER=govway
@@ -150,6 +155,9 @@ fi
         case "${GOVWAY_DB_TYPE:-hsql}" in
         oracle)
         EXIST_QUERY="SELECT count(table_name) FROM all_tables WHERE  LOWER(table_name)='${DBINFO,,}' AND LOWER(owner)='${DBUSER,,}';" 
+        ;;
+        mysql)
+        EXIST_QUERY="SELECT count(table_name) FROM information_schema.tables WHERE LOWER(table_name)='${DBINFO,,}' and LOWER(table_catalog)='${DBNAME,,}';"
         ;;
         postgresql)    
         if [ ${GOVWAY_READY_DB_CHECK_PGSQL_NATIVE^^} == 'FALSE' ]  
